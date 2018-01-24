@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+from enum import Enum
 import os
 
 class Entry:
@@ -34,9 +35,9 @@ class Database:
         try:
             self.fileEntries = open(fileName, 'r+')
         except IOError:
-            col(0, "open entries file")
+            col(PrintOutput.ERROR, "open entries file")
         else:
-            col(1, "open entries file")
+            col(PrintOutput.OK, "open entries file")
 
     def load_entries(self):
         for line in self.fileEntries:
@@ -48,13 +49,13 @@ class Database:
  
                 self.entries.append(Entry(path, date, keys))
             except:
-                col(2, "bad format of entries file")
+                col(PrintOutput.WARNING, "bad format of entries file")
             else:
-                col(3, path)
-                col(3, date)
-                col(3, keys)
+                col(PrintOutput.DEBUG, path)
+                col(PrintOutput.DEBUG, date)
+                col(PrintOutput.DEBUG, keys)
         
-        col(1, "load entries file")
+        col(PrintOutput.OK, "load entries file")
 
 
     def close_entries(self):
@@ -73,7 +74,7 @@ class Database:
             
             if (add):
                 newAlbums.append(subDir)
-                col(3, subDir)
+                col(PrintOutput.DEBUG, subDir)
         
         return newAlbums
         
@@ -82,17 +83,17 @@ class Database:
             line = path+";"+date+";"+('/'.join(keys))
             self.fileEntries.write(line+"\n")
         except IOError:
-            col(0, "perrmisions to write file")
+            col(PrintOutput.ERROR, "perrmisions to write file")
         else:
-            col(1, "write to file")
+            col(PrintOutput.OK, "write to file")
 
     def open_config(self, fileName):
         try:
             self.fileConfig = open(fileName, 'r')
         except IOError:
-            col(0, "open config file")
+            col(PrintOutput.ERROR, "open config file")
         else:
-            col(1, "open config file")
+            col(PrintOutput.OK, "open config file")
 
     def load_config(self):
         for line in self.fileConfig:
@@ -104,14 +105,14 @@ class Database:
                 if (key == "rootDirectory"):
                     self.rootDir = value
                 else:
-                    col(2, "bad value in config file")
+                    col(PrintOutput.WARNING, "bad value in config file")
             except:
-                col(2, "bad format of config file")
+                col(PrintOutput.WARNING, "bad format of config file")
             else:
-                col(3, key)
-                col(3, value)
+                col(PrintOutput.DEBUG, key)
+                col(PrintOutput.DEBUG, value)
         
-        col(1, "load config file")
+        col(PrintOutput.OK, "load config file")
 
     def close_config(self):
         self.fileConfig.close()
@@ -124,6 +125,13 @@ class Database:
 
         return matches
 
+class PrintOutput(Enum):
+    ERROR = 0
+    OK = 1
+    WARNING = 2
+    DEBUG = 3
+    INPUT = 4
+
 def col(y, text):
     W  = "\033[0m"  # white (normal)
     R  = "\033[31m" # red
@@ -133,32 +141,35 @@ def col(y, text):
     P  = "\033[35m" # purple
 
     # fatal error
-    if (y == 0):
+    if (y == PrintOutput.ERROR):
         print("["+R+"Error"+W+"] - ", end="")
         print(text)
         exit()
     # task ok
-    elif (y == 1):
+    elif (y == PrintOutput.OK):
         print("["+G+"Ok"+W+"] - ", end="")
         print(text)
     # ignorable error
-    elif (y == 2):
+    elif (y == PrintOutput.WARNING):
         print("["+O+"Warning"+W+"] - ", end="")
         print(text)
     # debug info
-    elif (y == 3):
+    elif (y == PrintOutput.DEBUG):
         print("["+B+"Debug"+W+"] - ", end="")
         print(text)
     # input
-    elif (y == 4):
+    elif (y == PrintOutput.INPUT):
         print("["+P+"Input"+W+"] - ", end="")
         print(text+": ", end="")
         try:
             return input()
         except:
             print()
-            col(0, "Keyboard Interrupt")
+            col(PrintOutput.ERROR, "Keyboard Interrupt")
             exit()
+    # nothing
+    else:
+        col(PrintOutput.ERROR, "Bad \"col\" function call")
 
 def test():
     db = Database()
@@ -174,8 +185,8 @@ def test():
     newAlbums = db.explore()
 
     for newOne in newAlbums:
-        keys = col(4, "type tags").split("/")
-        col(1, keys)
+        keys = col(PrintOutput.INPUT, newOne + " - type tags").split("/")
+        col(PrintOutput.OK, keys)
         if keys[0] == 'a':
             break;
         db.add_entry(newOne, "datum", keys)
@@ -183,4 +194,4 @@ def test():
     db.close_config()
     db.close_entries()
 
-#test()
+test()
