@@ -2,6 +2,8 @@
 
 from enum import Enum
 import os
+import os.path
+import time
 
 class Entry:
     path = None
@@ -40,26 +42,30 @@ class Database:
             col(PrintOutput.OK, "open entries file")
 
     def load_entries(self):
+        self.entries = list()
+
         for line in self.fileEntries:
             try:
                 buffer = line.split(";")
                 path = buffer[0]
                 date = buffer[1]
-                keys = buffer[2].replace('\n', '').split("/")
+                keys = list()
+
+                for key in buffer[2].replace('\n', '').split("/"):
+                    keys.append(key)
  
                 self.entries.append(Entry(path, date, keys))
             except:
                 col(PrintOutput.WARNING, "bad format of entries file")
             else:
-                col(PrintOutput.DEBUG, path)
-                col(PrintOutput.DEBUG, date)
-                col(PrintOutput.DEBUG, keys)
+                col(PrintOutput.DEBUG, path + " | " + date + " | " + ", ".join(keys))
         
         col(PrintOutput.OK, "load entries file")
 
 
     def close_entries(self):
         self.fileEntries.close()
+        col(PrintOutput.OK, "close entries file")
 
     def explore(self):
         newAlbums = list()
@@ -68,13 +74,18 @@ class Database:
         for subDir in subDirs:
             add = True
 
-            for entry in self.entries:
-                if (subDir == entry.path):
-                    add = False;
-            
+            if (self.entries != None):
+                for entry in self.entries:
+                    if (subDir == entry.path):
+                        add = False
+
             if (add):
-                newAlbums.append(subDir)
-                col(PrintOutput.DEBUG, subDir)
+                # get time of current album
+                epochDate = os.path.getctime(self.rootDir + "/" + subDir)
+                date = time.strftime('%Y.%m.%d', time.localtime(epochDate))
+
+                newAlbums.append([subDir, date])
+                col(PrintOutput.DEBUG, subDir + " - " + date)
         
         return newAlbums
         
@@ -116,6 +127,7 @@ class Database:
 
     def close_config(self):
         self.fileConfig.close()
+        col(PrintOutput.OK, "close config file")
     
     def search(self, keys):
         matches = list()
@@ -142,12 +154,12 @@ def col(y, text):
 
     # fatal error
     if (y == PrintOutput.ERROR):
-        print("["+R+"Error"+W+"] - ", end="")
+        print("["+R+"  Error"+W+"] - ", end="")
         print(text)
         exit()
     # task ok
     elif (y == PrintOutput.OK):
-        print("["+G+"Ok"+W+"] - ", end="")
+        print("["+G+"     Ok"+W+"] - ", end="")
         print(text)
     # ignorable error
     elif (y == PrintOutput.WARNING):
@@ -155,11 +167,11 @@ def col(y, text):
         print(text)
     # debug info
     elif (y == PrintOutput.DEBUG):
-        print("["+B+"Debug"+W+"] - ", end="")
+        print("["+B+"  Debug"+W+"] - ", end="")
         print(text)
     # input
     elif (y == PrintOutput.INPUT):
-        print("["+P+"Input"+W+"] - ", end="")
+        print("["+P+"  Input"+W+"] - ", end="")
         print(text+": ", end="")
         try:
             return input()
@@ -171,6 +183,7 @@ def col(y, text):
     else:
         col(PrintOutput.ERROR, "Bad \"col\" function call")
 
+'''
 def test():
     db = Database()
     rootDir = None
@@ -195,3 +208,4 @@ def test():
     db.close_entries()
 
 test()
+'''

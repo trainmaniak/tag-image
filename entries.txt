@@ -1,0 +1,6 @@
+a;datum;sea/friends
+b;datum;sea/italia
+c;datum;bowling/friends
+e;2018.01.25;neco1/neco2
+d;2018.01.25;neco1/neco2
+f;2018.01.25;neco1/neco2
