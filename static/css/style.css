@@ -1,0 +1,22 @@
+body {
+    background: linear-gradient(45deg, darkviolet, mediumvioletred);
+}
+
+#page {
+    width: 1000px;
+    margin: 0 auto;
+}
+
+h1 {
+    font-size: 40px;
+}
+
+.entry form {
+    padding: 7px 0;
+}
+
+.entry label {
+    font-size: 20px;
+    font-weight: bold;
+    margin-right: 15px;
+}

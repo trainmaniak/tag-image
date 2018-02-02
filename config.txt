@@ -1,1 +1,2 @@
 rootDirectory=/home/josef/git/imgs/root
+appName=Image

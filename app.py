@@ -9,6 +9,7 @@ import subprocess
 app = Flask(__name__)
 
 db = Database()
+lastNewAlbums = None
 htmlContentFile = "content.html"
 
 @app.route('/', methods = ['POST', 'GET'])
@@ -16,24 +17,65 @@ def index():
     # nothing form / home page
     #-------------------------
     if request.method != 'POST':
-        return render_template("index.html", content = "")
+        return render_template("index.html", appName = db.appName, content = "")
     else:
         # save form (save tags)
         #----------------------
         if "saveTags" in request.form:
+            for newOne in lastNewAlbums:
+                if (newOne.name == request.form["subdirName"]):
+                    tags = request.form["tags"].replace(" ", "").split(",")
+                    col(PrintOutput.OK, tags)
+                    db.add_entry(newOne.name, request.form["date"], tags)
 
-            # TODO save
+                    # TODO save after search ???? > lastNewAlbums
 
-            return explore()
+        # open form (open location in file manager)
+        #------------------------------------------
+        elif "openLocation" in request.form:
+            for newOne in lastNewAlbums:
+                if (newOne.name == request.form["subdirName"]):
+                    path = db.rootDir + "/" + newOne.name
+                    os.system('xdg-open "%s"' % path)
+
+                    # TODO open after search ???? > lastNewAlbums
+
+        # search form (search for existing albums)
+        #-----------------------------------------
+        elif "search" in request.form:
+            tags = request.form["searchTags"].replace(" ", "").split(",")
+            db.search(tags)
+
+            content = get_content(tags)
+
+            return render_template("index.html", appName=db.appName, content=content)
 
         # explore form (search for new albums)
         #-------------------------------------
         elif "explore" in request.form:
-            return explore()
+            pass
+
+        return explore()
 
 @app.errorhandler(404)
 def page_not_found(error):
     return render_template('404.html'), 404
+
+def get_content(items):
+    content = ""
+    for oneItem in items:
+        content += "<div class=\"entry\">" \
+                    "<form action=\"http://localhost:5000/\" method=\"post\">" \
+                    "<label for=\"subdirName\">" + oneItem.name + "</label>" \
+                    "<input type=\"hidden\" name=\"subdirName\" value=\"" + oneItem.name + "\">" \
+                    "<input type=\"text\" name=\"tags\" placeholder=\"Tags\">" \
+                    "<input type=\"text\" name=\"date\" value=\"" + oneItem.date + "\" placeholder=\"Date\">" \
+                    "<input type=\"submit\" name=\"saveTags\" value=\"Save\">" \
+                    "<input type=\"submit\" name=\"openLocation\" value=\"Open\"></form>" \
+                    "</div>"
+
+    return content
+
 
 def explore():
     reload_entry()
@@ -47,26 +89,16 @@ def explore():
     newAlbums = db.explore()
     if (len(newAlbums) == 0):
         content = "<div id=\"empty-content\">Nothing new</div>"
-        return render_template("index.html", content=content)
+        return render_template("index.html", appName = db.appName, content=content)
 
-    for newOne in newAlbums:
-        content += "<div class=\"entry\">" \
-                   "<p>" + newOne[0] + "</p>" \
-                                       "<form><input type=\"text\" name=\"tags\" placeholder=\"Tags\">" \
-                                       "<input type=\"text\" name=\"date\" value=\"" + newOne[
-                       1] + "\" placeholder=\"Date\">" \
-                            "<input type=\"submit\" name=\"saveTags\" value=\"Save\"></form>" \
-                            "</div>"
-
-    for newOne in newAlbums:
-        # keys = keys = col(PrintOutput.INPUT, newOne[0] + " - type tags").split("/")
-        keys = ["neco1", "neco2"]
-        col(PrintOutput.OK, keys)
-
-        db.add_entry(newOne[0], newOne[1], keys)
+    # newOne[0]-subdirName, newOne[1]-dirDate
+    content += get_content(newAlbums)
 
     content += "</div>"
-    return render_template("index.html", content=content)
+
+    global lastNewAlbums
+    lastNewAlbums = newAlbums
+    return render_template("index.html", appName = db.appName, content=content)
 
 def reload_entry():
     db.close_entries()

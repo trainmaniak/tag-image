@@ -6,28 +6,31 @@ import os.path
 import time
 
 class Entry:
-    path = None
+    name = None
     date = None
     tags = None
 
-    def __init__(self, path, date, tags):
-        self.path = path
+    def __init__(self, name, date, tags):
+        self.name = name
         self.date = date
         self.tags = tags
 
     def get_matches(self, keys):
         degree = 0
         
-        for i in tags:
-            if i == keys:
+        for tag in self.tags:
+            if tag == keys:
                 degree += 1
 
-        return index, degree
+        return self.name, degree
 
 class Database:
     fileConfig = None
     fileEntries = None
+
     rootDir = None
+    appName = None
+
     entries = list()
     
     def __init__(self):
@@ -47,18 +50,18 @@ class Database:
         for line in self.fileEntries:
             try:
                 buffer = line.split(";")
-                path = buffer[0]
+                name = buffer[0]
                 date = buffer[1]
                 keys = list()
 
                 for key in buffer[2].replace('\n', '').split("/"):
                     keys.append(key)
  
-                self.entries.append(Entry(path, date, keys))
+                self.entries.append(Entry(name, date, keys))
             except:
                 col(PrintOutput.WARNING, "bad format of entries file")
             else:
-                col(PrintOutput.DEBUG, path + " | " + date + " | " + ", ".join(keys))
+                col(PrintOutput.DEBUG, name + " | " + date + " | " + ", ".join(keys))
         
         col(PrintOutput.OK, "load entries file")
 
@@ -76,7 +79,7 @@ class Database:
 
             if (self.entries != None):
                 for entry in self.entries:
-                    if (subDir == entry.path):
+                    if (subDir == entry.name):
                         add = False
 
             if (add):
@@ -84,7 +87,7 @@ class Database:
                 epochDate = os.path.getctime(self.rootDir + "/" + subDir)
                 date = time.strftime('%Y.%m.%d', time.localtime(epochDate))
 
-                newAlbums.append([subDir, date])
+                newAlbums.append(Entry(subDir, date, None))
                 col(PrintOutput.DEBUG, subDir + " - " + date)
         
         return newAlbums
@@ -115,13 +118,14 @@ class Database:
 
                 if (key == "rootDirectory"):
                     self.rootDir = value
+                elif (key == "appName"):
+                    self.appName = value
                 else:
                     col(PrintOutput.WARNING, "bad value in config file")
             except:
                 col(PrintOutput.WARNING, "bad format of config file")
             else:
-                col(PrintOutput.DEBUG, key)
-                col(PrintOutput.DEBUG, value)
+                col(PrintOutput.DEBUG, key + "=" + value)
         
         col(PrintOutput.OK, "load config file")
 
@@ -132,10 +136,26 @@ class Database:
     def search(self, keys):
         matches = list()
         
-        for i in self.entries:
-            matches.append(i.get_matches(keys))
+        for entry in self.entries:
+            matches.append(entry.get_matches(keys))
 
-        return matches
+        primaryMatches = list()
+        for oneMatch in matches:
+            if (oneMatch[1] == len(keys)):
+                primaryMatches.append(oneMatch)
+
+        secondaryMatches = list()
+        degree = len(keys)
+        for oneMatch in matches:
+            for oneMatch in matches:
+                if (oneMatch[1] > 0 and oneMatch[1] == degree):
+                    secondaryMatches.append(oneMatch)
+
+            degree -= 1
+            if (degree == 0):
+                break
+
+        return primaryMatches, secondaryMatches
 
 class PrintOutput(Enum):
     ERROR = 0
