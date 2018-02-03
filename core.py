@@ -15,14 +15,14 @@ class Entry:
         self.date = date
         self.tags = tags
 
-    def get_matches(self, keys):
+    def get_matches(self, tags):
         degree = 0
         
-        for tag in self.tags:
-            if tag == keys:
+        for tag in tags:
+            if tag in self.tags:
                 degree += 1
 
-        return self.name, degree
+        return self, degree
 
 class Database:
     fileConfig = None
@@ -92,14 +92,33 @@ class Database:
         
         return newAlbums
         
-    def add_entry(self, path, date, keys):
+    def add_entry(self, name, date, tags):
         try:
-            line = path+";"+date+";"+('/'.join(keys))
+            line = name + ";" + date + ";" + ('/'.join(tags))
             self.fileEntries.write(line+"\n")
         except IOError:
-            col(PrintOutput.ERROR, "perrmisions to write file")
+            col(PrintOutput.ERROR, "permissions to write file")
         else:
             col(PrintOutput.OK, "write to file")
+
+    def change_entry(self, name, date, tags):
+        for entry in self.entries:
+            if (entry.name == name):
+                entry.date = date
+                entry.tags = tags
+
+        try:
+            #open('file.txt', 'w').close()
+            self.close_entries()
+            self.open_entries("entries.txt")
+            self.fileEntries.truncate()
+
+            for entry in self.entries:
+                self.add_entry(entry.name, entry.date, entry.tags)
+        except IOError:
+            col(PrintOutput.ERROR, "permissions to write file")
+        else:
+            col(PrintOutput.OK, "change entry in file")
 
     def open_config(self, fileName):
         try:
@@ -137,19 +156,21 @@ class Database:
         matches = list()
         
         for entry in self.entries:
+            print(keys)
+            print("///" + str(entry.get_matches(keys)[1]))
             matches.append(entry.get_matches(keys))
 
         primaryMatches = list()
         for oneMatch in matches:
             if (oneMatch[1] == len(keys)):
-                primaryMatches.append(oneMatch)
+                primaryMatches.append(oneMatch[0])
 
         secondaryMatches = list()
-        degree = len(keys)
+        degree = len(keys) - 1
         for oneMatch in matches:
             for oneMatch in matches:
                 if (oneMatch[1] > 0 and oneMatch[1] == degree):
-                    secondaryMatches.append(oneMatch)
+                    secondaryMatches.append(oneMatch[0])
 
             degree -= 1
             if (degree == 0):

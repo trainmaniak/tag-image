@@ -7,14 +7,16 @@
         <div id="page">
             <h1>#{{ appName|safe }}</h1>
             <form action="http://localhost:5000/" method="post">
-                <input type="submit" name="explore" value="Explore" />
+                <input id="btn_explore" type="submit" name="explore" value="Explore" />
             </form>
             <form action="http://localhost:5000/" method="post">
-                <input type="search" name="searchTags" placeholder="Tags" />
+                <input id="txt_search" type="search" name="searchTags" value="{{ lastSearch|safe }}" placeholder="Tags" />
                 <!--<input type="search" name="searchDate" placeholder="Date" />-->
-                <input type="submit" name="search" value="Search" />
+                <input id="btn_search" type="submit" name="search" value="Search" />
             </form>
-            {{ content|safe }}
+                <div id=content>
+                    {{ content|safe }}
+                </div>
         </div>
     </body>
 </html>

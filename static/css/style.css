@@ -1,5 +1,6 @@
 body {
     background: linear-gradient(45deg, darkviolet, mediumvioletred);
+    font-family: Ubuntu;
 }
 
 #page {
@@ -7,16 +8,98 @@ body {
     margin: 0 auto;
 }
 
+#content {
+}
+
+h2 {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 2px solid black;
+}
+
 h1 {
     font-size: 40px;
 }
 
-.entry form {
-    padding: 7px 0;
+#btn_explore {
+    float: left;
+    width: 100px;
+    margin: 7px 0;
+    margin-right: 7px;
+}
+
+#btn_search {
+    float: right;
+    width: 130px;
+    margin: 7px 0;
+    margin-left: 0;
+    border-radius: 0 6px 6px 0;
+}
+
+#txt_search {
+    width: 763px;
+    margin: 7px 0;
+    border-right: none;
+    border-radius: 6px 0 0 6px;
+    border-right: 1px solid black;
+    margin-right: 0;
+}
+
+#prim {
+    border-left: 7px solid rgb(50, 255, 50);
+}
+
+#sec {
+    border-left: 7px solid orange;
+}
+
+.btn_save {
+    width: 70px;
+    margin-right: 10px;
+}
+
+.btn_open {
+    width: 70px;
 }
 
 .entry label {
-    font-size: 20px;
-    font-weight: bold;
-    margin-right: 15px;
+    font-size: 24px;
+    padding: 4px 0;
+    margin-left: 10px;
+}
+
+.entry form {
+    text-align: right;
+    padding: 5px 0;
+}
+
+input[type=text], input[type=search] {
+    background: rgba(255, 255, 255, 0.8);
+    font-size: 16px;
+    padding: 7px;
+    border: none;
+    border-radius: 6px;
+}
+
+input[type=submit] {
+    background: rgba(190, 190, 190, 0.8);
+    color: black;
+    font-size: 16px;
+    padding: 7px;
+    border: none;
+    border-radius: 6px;
+}
+
+.entry form label {
+    float: left;
+}
+
+.entry form .txt_tags {
+    width: 510px;
+    margin: 0px 10px
+}
+
+.entry form .txt_date {
+    width: 95px;
+    margin: 0 10px 0 0;
 }

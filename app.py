@@ -8,8 +8,14 @@ import subprocess
 
 app = Flask(__name__)
 
+class LastActions:
+    lastAlbums = None
+    lastSearch = ""
+    lastAction = 0   # 0-explore, 1-search
+
 db = Database()
-lastNewAlbums = None
+la = LastActions()
+
 htmlContentFile = "content.html"
 
 @app.route('/', methods = ['POST', 'GET'])
@@ -17,45 +23,55 @@ def index():
     # nothing form / home page
     #-------------------------
     if request.method != 'POST':
-        return render_template("index.html", appName = db.appName, content = "")
+        return render_template("index.html", appName = db.appName, lastSearch=la.lastSearch, content = "")
     else:
         # save form (save tags)
         #----------------------
         if "saveTags" in request.form:
-            for newOne in lastNewAlbums:
+            for newOne in la.lastAlbums:
                 if (newOne.name == request.form["subdirName"]):
                     tags = request.form["tags"].replace(" ", "").split(",")
                     col(PrintOutput.OK, tags)
-                    db.add_entry(newOne.name, request.form["date"], tags)
+
+                    if (la.lastAction == 0):
+                        db.add_entry(newOne.name, request.form["date"], tags)
+                    else:
+                        db.change_entry(newOne.name, request.form["date"], tags)
 
                     # TODO save after search ???? > lastNewAlbums
+
+            if (la.lastAction == 0):
+                return explore()
+            else:
+                return search()
 
         # open form (open location in file manager)
         #------------------------------------------
         elif "openLocation" in request.form:
-            for newOne in lastNewAlbums:
+            for newOne in la.lastAlbums:
                 if (newOne.name == request.form["subdirName"]):
                     path = db.rootDir + "/" + newOne.name
                     os.system('xdg-open "%s"' % path)
 
                     # TODO open after search ???? > lastNewAlbums
 
+            if (la.lastAction == 0):
+                return explore()
+            else:
+                return search()
+
         # search form (search for existing albums)
         #-----------------------------------------
         elif "search" in request.form:
-            tags = request.form["searchTags"].replace(" ", "").split(",")
-            db.search(tags)
-
-            content = get_content(tags)
-
-            return render_template("index.html", appName=db.appName, content=content)
+            la.lastAction = 1
+            la.lastSearch = request.form["searchTags"]
+            return search()
 
         # explore form (search for new albums)
         #-------------------------------------
         elif "explore" in request.form:
-            pass
-
-        return explore()
+            la.lastAction = 0
+            return explore()
 
 @app.errorhandler(404)
 def page_not_found(error):
@@ -64,41 +80,70 @@ def page_not_found(error):
 def get_content(items):
     content = ""
     for oneItem in items:
+        tags = None
+        if (oneItem.tags == None):
+            tags = ""
+        else:
+            tags = " value=\"" + ", ".join(oneItem.tags) + "\" "
+
         content += "<div class=\"entry\">" \
                     "<form action=\"http://localhost:5000/\" method=\"post\">" \
                     "<label for=\"subdirName\">" + oneItem.name + "</label>" \
                     "<input type=\"hidden\" name=\"subdirName\" value=\"" + oneItem.name + "\">" \
-                    "<input type=\"text\" name=\"tags\" placeholder=\"Tags\">" \
-                    "<input type=\"text\" name=\"date\" value=\"" + oneItem.date + "\" placeholder=\"Date\">" \
-                    "<input type=\"submit\" name=\"saveTags\" value=\"Save\">" \
-                    "<input type=\"submit\" name=\"openLocation\" value=\"Open\"></form>" \
+                    "<input class=\"txt_tags\" type=\"text\" name=\"tags\" placeholder=\"Tags\"" + tags + ">" \
+                    "<input class=\"txt_date\" type=\"text\" name=\"date\" value=\"" + oneItem.date + "\" placeholder=\"Date\">" \
+                    "<input class=\"btn_save\" type=\"submit\" name=\"saveTags\" value=\"Save\">" \
+                    "<input class=\"btn_open\" type=\"submit\" name=\"openLocation\" value=\"Open\"></form>" \
                     "</div>"
 
     return content
 
+def search():
+    primaryMatches = None
+    secondaryMatches = list()
+    if (la.lastSearch == ""):
+        primaryMatches = db.entries
+    else:
+        tags = la.lastSearch.replace(" ", "").split(",")
+        primaryMatches, secondaryMatches = db.search(tags)
+
+    if (len(primaryMatches) == 0 and len(secondaryMatches) == 0):
+        content = "<h2>No items found</h2>"
+        return render_template("index.html", appName=db.appName, lastSearch=la.lastSearch, content=content)
+
+    la.lastAlbums = list()
+    la.lastAlbums.extend(primaryMatches)
+    la.lastAlbums.extend(secondaryMatches)
+
+    content = "<h2>Found items:</h2>"
+
+    prim = get_content(primaryMatches)
+    if (prim != ""):
+        content += "<div id=\"prim\">"
+        content += prim
+        content += "</div>"
+
+    sec = get_content(secondaryMatches)
+    if (sec != ""):
+        content += "<div id=\"sec\">"
+        content += sec
+        content += "</div>"
+
+    return render_template("index.html", appName=db.appName, lastSearch=la.lastSearch, content=content)
 
 def explore():
     reload_entry()
 
-    '''
-    htmlContent = open(htmlContentFile, 'r')
-    content = htmlContent.read()
-    htmlContent.close()
-    '''
-    content = "<div id=\"content\">"
     newAlbums = db.explore()
     if (len(newAlbums) == 0):
-        content = "<div id=\"empty-content\">Nothing new</div>"
-        return render_template("index.html", appName = db.appName, content=content)
+        content = "<h2>Nothing new</h2>"
+        return render_template("index.html", appName = db.appName, lastSearch=la.lastSearch, content=content)
 
-    # newOne[0]-subdirName, newOne[1]-dirDate
+    la.lastAlbums = newAlbums
+
+    content = "<h2>New albums:</h2>"
     content += get_content(newAlbums)
-
-    content += "</div>"
-
-    global lastNewAlbums
-    lastNewAlbums = newAlbums
-    return render_template("index.html", appName = db.appName, content=content)
+    return render_template("index.html", appName = db.appName, lastSearch=la.lastSearch, content=content)
 
 def reload_entry():
     db.close_entries()
@@ -124,9 +169,6 @@ if __name__ == "__main__":
     app.run()
     #webbrowser.open("http://example.com/")
     #subprocess.Popen(['xdg-open', 'http://example.com/'])
-
-
-
 
 '''
 from appJar import gui
