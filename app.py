@@ -1,46 +1,70 @@
-#!/usr/bin/python3
+#!venv/bin/python3
+'''#!venv\Scripts\pythonw.exe'''
+'''#!/usr/bin/python3'''
 
-from flask import Flask, render_template, request
+#from flask_socketio import SocketIO, emit
+from flask import Flask, render_template, request#, sessions
 from core import *
-import time
-import webbrowser
+from sys import platform
+
 import subprocess
+import webbrowser
+import threading
 
-app = Flask(__name__)
+class OsType(Enum):
+    LINUX = 0
+    OSX = 1
+    WIN = 2
 
-class LastActions:
+class StatInfo:
+    appVersion = "linux-0.1.1"
+    osType = None
     lastAlbums = None
     lastSearch = ""
-    lastAction = 0   # 0-explore, 1-search
+    lastAction = -1   # -1-start, 0-explore, 1-search
+
+
+app = Flask(__name__)
+#socketio = SocketIO(app)
 
 db = Database()
-la = LastActions()
+si = StatInfo()
 
 htmlContentFile = "content.html"
 
 @app.route('/', methods = ['POST', 'GET'])
 def index():
+    '''
+    print(la.lastAction)
+    if (la.lastAction == -1 and db.exploreOnStartup):
+        print("asdf")
+        la.lastAction = 0
+        return explore()
+    '''
+
     # nothing form / home page
     #-------------------------
     if request.method != 'POST':
-        return render_template("index.html", appName = db.appName, lastSearch=la.lastSearch, content = "")
+        return render_template("index.html", appName = db.appName, lastSearch=si.lastSearch, content ="", version=si.appVersion)
     else:
         # save form (save tags)
         #----------------------
         if "saveTags" in request.form:
-            for newOne in la.lastAlbums:
+            for newOne in si.lastAlbums:
                 if (newOne.name == request.form["subdirName"]):
                     tags = request.form["tags"].replace(" ", "").split(",")
                     col(PrintOutput.OK, tags)
 
-                    if (la.lastAction == 0):
+                    if (si.lastAction == 0):
                         db.add_entry(newOne.name, request.form["date"], tags)
                     else:
                         db.change_entry(newOne.name, request.form["date"], tags)
 
                     # TODO save after search ???? > lastNewAlbums
 
-            if (la.lastAction == 0):
+                    # TODO font, setting, lib-flask,
+
+            if (si.lastAction == 0):
                 return explore()
             else:
                 return search()
@@ -48,30 +72,48 @@ def index():
         # open form (open location in file manager)
         #------------------------------------------
         elif "openLocation" in request.form:
-            for newOne in la.lastAlbums:
+            for newOne in si.lastAlbums:
                 if (newOne.name == request.form["subdirName"]):
-                    path = db.rootDir + "/" + newOne.name
-                    os.system('xdg-open "%s"' % path)
+                    if (si.osType == OsType.LINUX):
+                        path = db.rootDir + "/" + newOne.name
+                        os.system('xdg-open "%s"' % path)
+                    elif (si.osType == OsType.WIN):
+                        path = db.rootDir + "\\" + newOne.name
+                        subprocess.Popen('explorer "' + path + '\\"')
+                        #subprocess.Popen('explorer "C:\Users"')
+                        #subprocess.Popen(r'explorer /select,"' + path + '"')
+                        #os.system('start "' + path + '"')
 
                     # TODO open after search ???? > lastNewAlbums
 
-            if (la.lastAction == 0):
+            if (si.lastAction == 0):
                 return explore()
             else:
                 return search()
 
+        # explore form (search for new albums)
+        # -------------------------------------
+        elif "explore" in request.form:
+            si.lastAction = 0
+            return explore()
+
         # search form (search for existing albums)
         #-----------------------------------------
         elif "search" in request.form:
-            la.lastAction = 1
-            la.lastSearch = request.form["searchTags"]
+            si.lastAction = 1
+            si.lastSearch = request.form["searchTags"]
             return search()
 
-        # explore form (search for new albums)
-        #-------------------------------------
-        elif "explore" in request.form:
-            la.lastAction = 0
-            return explore()
+        # close form (close app)
+        # ----------------------
+        elif "close" in request.form:
+            close_app()
+
+'''
+@socketio.on('disconnect')
+def close_tab():
+    exit_app()
+'''
 
 @app.errorhandler(404)
 def page_not_found(error):
@@ -101,19 +143,19 @@ def get_content(items):
 def search():
     primaryMatches = None
     secondaryMatches = list()
-    if (la.lastSearch == ""):
+    if (si.lastSearch == ""):
         primaryMatches = db.entries
     else:
-        tags = la.lastSearch.replace(" ", "").split(",")
+        tags = si.lastSearch.replace(" ", "").split(",")
         primaryMatches, secondaryMatches = db.search(tags)
 
     if (len(primaryMatches) == 0 and len(secondaryMatches) == 0):
         content = "<h2>No items found</h2>"
-        return render_template("index.html", appName=db.appName, lastSearch=la.lastSearch, content=content)
+        return render_template("index.html", appName=db.appName, lastSearch=si.lastSearch, content=content, version=si.appVersion)
 
-    la.lastAlbums = list()
-    la.lastAlbums.extend(primaryMatches)
-    la.lastAlbums.extend(secondaryMatches)
+    si.lastAlbums = list()
+    si.lastAlbums.extend(primaryMatches)
+    si.lastAlbums.extend(secondaryMatches)
 
     content = "<h2>Found items:</h2>"
 
@@ -129,7 +171,7 @@ def search():
         content += sec
         content += "</div>"
 
-    return render_template("index.html", appName=db.appName, lastSearch=la.lastSearch, content=content)
+    return render_template("index.html", appName=db.appName, lastSearch=si.lastSearch, content=content, version=si.appVersion)
 
 def explore():
     reload_entry()
@@ -137,13 +179,13 @@ def explore():
     newAlbums = db.explore()
     if (len(newAlbums) == 0):
         content = "<h2>Nothing new</h2>"
-        return render_template("index.html", appName = db.appName, lastSearch=la.lastSearch, content=content)
+        return render_template("index.html", appName = db.appName, lastSearch=si.lastSearch, content=content, version=si.appVersion)
 
-    la.lastAlbums = newAlbums
+    si.lastAlbums = newAlbums
 
     content = "<h2>New albums:</h2>"
     content += get_content(newAlbums)
-    return render_template("index.html", appName = db.appName, lastSearch=la.lastSearch, content=content)
+    return render_template("index.html", appName = db.appName, lastSearch=si.lastSearch, content=content, version=si.appVersion)
 
 def reload_entry():
     db.close_entries()
@@ -154,47 +196,33 @@ def core_launch():
     rootDir = None
 
     db.open_config("config.txt")
-    db.open_entries("entries.txt")
-
     db.load_config()
+
+    db.open_entries(db.entriesFileLocation)
     db.load_entries()
 
-def exit_app():
+def close_app():
     db.close_config()
     db.close_entries()
     exit()
 
 if __name__ == "__main__":
+    # operating system check
+    if platform == "linux" or platform == "linux2":
+        si.osType = OsType.LINUX
+    elif platform == "darwin":
+        si.osType = OsType.OSX
+    elif platform == "win32":
+        si.osType = OsType.WIN
+
+    col(PrintOutput.DEBUG, "Operating system: " + platform)
+
+    # launch core (db, ...)
     core_launch()
-    app.run()
-    #webbrowser.open("http://example.com/")
-    #subprocess.Popen(['xdg-open', 'http://example.com/'])
 
-'''
-from appJar import gui
-import database
-
-class MainWindow:
-    window = None
-
-    def __init__(self):
-        self.windows = gui()
-
-        self.windows.addLabel("title", "Photo Manager", 0, 0, 1) # Row 0,Column 0,Span 1
-        self.windows.addButtons(["Search", "Add new"], self.press_btn, 1, 0, 1) # Row 1,Column 0,Span 1
-        self.windows.addButtons(["Exit"], self.press_btn, 2, 1, 0) # Row 2,Column 1
-        self.windows.go()
-
-    def press_btn(self, btn):
-        if (btn == "Exit"):
-            self.window.stop()
-        elif (btn == "Search"):
-            pass
-        elif (btn == "Add new"):
-            pass
-
-def main():
-    window = MainWindow()
-
-main()
-'''
+    # run flask and open tab in browser
+    port = 5000
+    #port = 5000 + random.randint(0, 999)
+    url = "http://127.0.0.1:{0}".format(port)
+    threading.Timer(1.25, lambda: webbrowser.open(url)).start()
+    app.run(port=port, debug=False)

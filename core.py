@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+'''#!/usr/bin/python3'''
 
 from enum import Enum
 import os
@@ -26,6 +26,8 @@ class Entry:
 
 class Database:
     fileConfig = None
+    entriesFileLocation = None
+    exploreOnStartup = False
     fileEntries = None
 
     rootDir = None
@@ -54,7 +56,7 @@ class Database:
                 date = buffer[1]
                 keys = list()
 
-                for key in buffer[2].replace('\n', '').split("/"):
+                for key in buffer[2].replace('\r', '').replace('\n', '').split("/"):
                     keys.append(key)
  
                 self.entries.append(Entry(name, date, keys))
@@ -95,7 +97,7 @@ class Database:
     def add_entry(self, name, date, tags):
         try:
             line = name + ";" + date + ";" + ('/'.join(tags))
-            self.fileEntries.write(line+"\n")
+            self.fileEntries.write(line+"\r\n")
         except IOError:
             col(PrintOutput.ERROR, "permissions to write file")
         else:
@@ -110,7 +112,7 @@ class Database:
         try:
             #open('file.txt', 'w').close()
             self.close_entries()
-            self.open_entries("entries.txt")
+            self.open_entries(self.entriesFileLocation)
             self.fileEntries.truncate()
 
             for entry in self.entries:
@@ -133,12 +135,17 @@ class Database:
             try:
                 buffer = line.split("=")
                 key = buffer[0]
-                value = buffer[1].replace('\n', '')
+                value = buffer[1].replace('\r', '').replace('\n', '')
 
                 if (key == "rootDirectory"):
                     self.rootDir = value
                 elif (key == "appName"):
                     self.appName = value
+                elif (key == "entriesFileLocation"):
+                    self.entriesFileLocation = value
+                elif (key == "exploreOnStartup"):
+                    if (value == "true"):
+                        self.exploreOnStartup = True
                 else:
                     col(PrintOutput.WARNING, "bad value in config file")
             except:

@@ -1,7 +1,12 @@
 <!DOCTYPE html>
     <head>
         <link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
-        <title>#Image</title>
+        <title>#{{ appName|safe }}</title>
+        <!--<script type="text/javascript">
+            window.onbeforeunload = function() {
+                return confirm("Do you really want to close app?");
+            }
+        </script>-->
     </head>
     <body>
         <div id="page">
@@ -14,9 +19,14 @@
                 <!--<input type="search" name="searchDate" placeholder="Date" />-->
                 <input id="btn_search" type="submit" name="search" value="Search" />
             </form>
-                <div id=content>
-                    {{ content|safe }}
-                </div>
+            <form action="http://localhost:5000/" method="post">
+                <input id="btn_close" type="submit" name="close" value="Close" />
+            </form>
+            <div class="reset_float"></div>
+            <div id=content>
+                {{ content|safe }}
+            </div>
+            <div id="app_version">#Image app ver. {{ version|safe }}</div>
         </div>
     </body>
 </html>
