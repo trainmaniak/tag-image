@@ -1,4 +1,4 @@
-#!venv/bin/python3
+#!venv-linux/bin/python3
 '''#!venv\Scripts\pythonw.exe'''
 '''#!/usr/bin/python3'''
 
@@ -16,12 +16,17 @@ class OsType(Enum):
     OSX = 1
     WIN = 2
 
+class LastAction(Enum):
+    START = 0
+    EXPLORE = 1
+    SEARCH = 2
+
 class StatInfo:
-    appVersion = "linux-0.1.1"
+    appVersion = "0.1.1"
     osType = None
     lastAlbums = None
-    lastSearch = ""
-    lastAction = -1   # -1-start, 0-explore, 1-search
+    lastSearchExpression = ""
+    lastAction = LastAction.START
 
 
 app = Flask(__name__)
@@ -45,7 +50,7 @@ def index():
     # nothing form / home page
     #-------------------------
     if request.method != 'POST':
-        return render_template("index.html", appName = db.appName, lastSearch=si.lastSearch, content ="", version=si.appVersion)
+        return render_template("index.html", appName = db.appName, lastSearch=si.lastSearchExpression, content ="", version=si.appVersion)
     else:
         # save form (save tags)
         #----------------------
@@ -55,7 +60,7 @@ def index():
                     tags = request.form["tags"].replace(" ", "").split(",")
                     col(PrintOutput.OK, tags)
 
-                    if (si.lastAction == 0):
+                    if (si.lastAction == LastAction.EXPLORE):
                         db.add_entry(newOne.name, request.form["date"], tags)
                     else:
                         db.change_entry(newOne.name, request.form["date"], tags)
@@ -64,7 +69,7 @@ def index():
 
                     # TODO font, setting, lib-flask,
 
-            if (si.lastAction == 0):
+            if (si.lastAction == LastAction.EXPLORE):
                 return explore()
             else:
                 return search()
@@ -86,7 +91,7 @@ def index():
 
                     # TODO open after search ???? > lastNewAlbums
 
-            if (si.lastAction == 0):
+            if (si.lastAction == LastAction.EXPLORE):
                 return explore()
             else:
                 return search()
@@ -94,14 +99,14 @@ def index():
         # explore form (search for new albums)
         # -------------------------------------
         elif "explore" in request.form:
-            si.lastAction = 0
+            si.lastAction = LastAction.EXPLORE
             return explore()
 
         # search form (search for existing albums)
         #-----------------------------------------
         elif "search" in request.form:
-            si.lastAction = 1
-            si.lastSearch = request.form["searchTags"]
+            si.lastAction = LastAction.SEARCH
+            si.lastSearchExpression = request.form["searchTags"]
             return search()
 
         # close form (close app)
@@ -143,15 +148,15 @@ def get_content(items):
 def search():
     primaryMatches = None
     secondaryMatches = list()
-    if (si.lastSearch == ""):
+    if (si.lastSearchExpression == ""):
         primaryMatches = db.entries
     else:
-        tags = si.lastSearch.replace(" ", "").split(",")
+        tags = si.lastSearchExpression.replace(" ", "").split(",")
         primaryMatches, secondaryMatches = db.search(tags)
 
     if (len(primaryMatches) == 0 and len(secondaryMatches) == 0):
         content = "<h2>No items found</h2>"
-        return render_template("index.html", appName=db.appName, lastSearch=si.lastSearch, content=content, version=si.appVersion)
+        return render_template("index.html", appName=db.appName, lastSearch=si.lastSearchExpression, content=content, version=si.appVersion)
 
     si.lastAlbums = list()
     si.lastAlbums.extend(primaryMatches)
@@ -171,7 +176,7 @@ def search():
         content += sec
         content += "</div>"
 
-    return render_template("index.html", appName=db.appName, lastSearch=si.lastSearch, content=content, version=si.appVersion)
+    return render_template("index.html", appName=db.appName, lastSearch=si.lastSearchExpression, content=content, version=si.appVersion)
 
 def explore():
     reload_entry()
@@ -179,13 +184,13 @@ def explore():
     newAlbums = db.explore()
     if (len(newAlbums) == 0):
         content = "<h2>Nothing new</h2>"
-        return render_template("index.html", appName = db.appName, lastSearch=si.lastSearch, content=content, version=si.appVersion)
+        return render_template("index.html", appName = db.appName, lastSearch=si.lastSearchExpression, content=content, version=si.appVersion)
 
     si.lastAlbums = newAlbums
 
     content = "<h2>New albums:</h2>"
     content += get_content(newAlbums)
-    return render_template("index.html", appName = db.appName, lastSearch=si.lastSearch, content=content, version=si.appVersion)
+    return render_template("index.html", appName = db.appName, lastSearch=si.lastSearchExpression, content=content, version=si.appVersion)
 
 def reload_entry():
     db.close_entries()
