@@ -1,4 +1,4 @@
-rootDirectory=/home/josef/git/imgs/root
-entriesFileLocation=/home/josef/git/imgs/entries.txt
+rootDirectory=root
+entriesFileLocation=entries.txt
 exploreOnStartup=false
 appName=Image

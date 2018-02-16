@@ -1,9 +1,9 @@
-'''#!/usr/bin/python3'''
 
-from enum import Enum
 import os
 import os.path
 import time
+
+from tools import *
 
 class Entry:
     name = None
@@ -42,9 +42,21 @@ class Database:
         try:
             self.fileEntries = open(fileName, 'r+')
         except IOError:
-            col(PrintOutput.ERROR, "open entries file")
+            InfoPrinter.out(PrintOutput.WARNING, "cannot open entries file")
+
+            # TODO rewrite old entries file because permission ???
+
+            try:
+                newFile = open(fileName, 'w')
+                newFile.close()
+                InfoPrinter.out(PrintOutput.OK, 'created new entries file')
+
+                self.open_entries(fileName)
+            except:
+                InfoPrinter.out(PrintOutput.ERROR, 'cannot create new entries file')
+
         else:
-            col(PrintOutput.OK, "open entries file")
+            InfoPrinter.out(PrintOutput.OK, "open entries file")
 
     def load_entries(self):
         self.entries = list()
@@ -61,16 +73,16 @@ class Database:
  
                 self.entries.append(Entry(name, date, keys))
             except:
-                col(PrintOutput.WARNING, "bad format of entries file")
+                InfoPrinter.out(PrintOutput.WARNING, "bad format of entries file")
             else:
-                col(PrintOutput.DEBUG, name + " | " + date + " | " + ", ".join(keys))
+                InfoPrinter.out(PrintOutput.DEBUG, name + " | " + date + " | " + ", ".join(keys))
         
-        col(PrintOutput.OK, "load entries file")
+        InfoPrinter.out(PrintOutput.OK, "load entries file")
 
 
     def close_entries(self):
         self.fileEntries.close()
-        col(PrintOutput.OK, "close entries file")
+        InfoPrinter.out(PrintOutput.OK, "close entries file")
 
     def explore(self):
         newAlbums = list()
@@ -90,7 +102,7 @@ class Database:
                 date = time.strftime('%Y.%m.%d', time.localtime(epochDate))
 
                 newAlbums.append(Entry(subDir, date, None))
-                col(PrintOutput.DEBUG, subDir + " - " + date)
+                InfoPrinter.out(PrintOutput.DEBUG, subDir + " - " + date)
         
         return newAlbums
         
@@ -99,9 +111,9 @@ class Database:
             line = name + ";" + date + ";" + ('/'.join(tags))
             self.fileEntries.write(line+"\r\n")
         except IOError:
-            col(PrintOutput.ERROR, "permissions to write file")
+            InfoPrinter.out(PrintOutput.ERROR, "permissions to write file")
         else:
-            col(PrintOutput.OK, "write to file")
+            InfoPrinter.out(PrintOutput.OK, "write to file")
 
     def change_entry(self, name, date, tags):
         for entry in self.entries:
@@ -118,17 +130,17 @@ class Database:
             for entry in self.entries:
                 self.add_entry(entry.name, entry.date, entry.tags)
         except IOError:
-            col(PrintOutput.ERROR, "permissions to write file")
+            InfoPrinter.out(PrintOutput.ERROR, "permissions to write file")
         else:
-            col(PrintOutput.OK, "change entry in file")
+            InfoPrinter.out(PrintOutput.OK, "change entry in file")
 
     def open_config(self, fileName):
         try:
             self.fileConfig = open(fileName, 'r')
         except IOError:
-            col(PrintOutput.ERROR, "open config file")
+            InfoPrinter.out(PrintOutput.ERROR, "open config file")
         else:
-            col(PrintOutput.OK, "open config file")
+            InfoPrinter.out(PrintOutput.OK, "open config file")
 
     def load_config(self):
         for line in self.fileConfig:
@@ -147,17 +159,17 @@ class Database:
                     if (value == "true"):
                         self.exploreOnStartup = True
                 else:
-                    col(PrintOutput.WARNING, "bad value in config file")
+                    InfoPrinter.out(PrintOutput.WARNING, "bad value in config file")
             except:
-                col(PrintOutput.WARNING, "bad format of config file")
+                InfoPrinter.out(PrintOutput.WARNING, "bad format of config file")
             else:
-                col(PrintOutput.DEBUG, key + "=" + value)
+                InfoPrinter.out(PrintOutput.DEBUG, key + "=" + value)
         
-        col(PrintOutput.OK, "load config file")
+        InfoPrinter.out(PrintOutput.OK, "load config file")
 
     def close_config(self):
         self.fileConfig.close()
-        col(PrintOutput.OK, "close config file")
+        InfoPrinter.out(PrintOutput.OK, "close config file")
     
     def search(self, keys):
         matches = list()
@@ -184,76 +196,3 @@ class Database:
                 break
 
         return primaryMatches, secondaryMatches
-
-class PrintOutput(Enum):
-    ERROR = 0
-    OK = 1
-    WARNING = 2
-    DEBUG = 3
-    INPUT = 4
-
-def col(y, text):
-    W  = "\033[0m"  # white (normal)
-    R  = "\033[31m" # red
-    G  = "\033[32m" # green
-    O  = "\033[33m" # orange
-    B  = "\033[34m" # blue
-    P  = "\033[35m" # purple
-
-    # fatal error
-    if (y == PrintOutput.ERROR):
-        print("["+R+"  Error"+W+"] - ", end="")
-        print(text)
-        exit()
-    # task ok
-    elif (y == PrintOutput.OK):
-        print("["+G+"     Ok"+W+"] - ", end="")
-        print(text)
-    # ignorable error
-    elif (y == PrintOutput.WARNING):
-        print("["+O+"Warning"+W+"] - ", end="")
-        print(text)
-    # debug info
-    elif (y == PrintOutput.DEBUG):
-        print("["+B+"  Debug"+W+"] - ", end="")
-        print(text)
-    # input
-    elif (y == PrintOutput.INPUT):
-        print("["+P+"  Input"+W+"] - ", end="")
-        print(text+": ", end="")
-        try:
-            return input()
-        except:
-            print()
-            col(PrintOutput.ERROR, "Keyboard Interrupt")
-            exit()
-    # nothing
-    else:
-        col(PrintOutput.ERROR, "Bad \"col\" function call")
-
-'''
-def test():
-    db = Database()
-    rootDir = None
-
-    db.open_config("config")
-    db.open_entries("entries")
-
-    db.load_config()
-    db.load_entries()
-
-    #db.add_entry("cesta", "datum", {"tagA", "tagB"})
-    newAlbums = db.explore()
-
-    for newOne in newAlbums:
-        keys = col(PrintOutput.INPUT, newOne + " - type tags").split("/")
-        col(PrintOutput.OK, keys)
-        if keys[0] == 'a':
-            break;
-        db.add_entry(newOne, "datum", keys)
-
-    db.close_config()
-    db.close_entries()
-
-test()
-'''
