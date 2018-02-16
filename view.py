@@ -12,7 +12,7 @@ from tools import *
 from update import *
 
 class StatInfo:
-    appVersion = "0.1.2"
+    appVersion = "0.2.0"
     osType = None
     lastAlbums = None
     lastSearchExpression = ""

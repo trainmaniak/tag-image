@@ -10,19 +10,29 @@ from tools import *
 
 class Update:
     url = 'https://raw.githubusercontent.com/trainmaniak/tag-image-update/master/'
+
     updateAppName = 'tag-image.zip'
     updateFileName = 'version.txt'
+
     updateTempDir = 'updateTemp'
     updateTempDirZip = 'zip'
     updateTempDirUnpacked = 'unpacked'
 
-    osType = None
+    separator = None
+
     currentVersion = None
     newVersion = None
 
     def __init__(self, si):
         self.currentVersion = si.appVersion
-        self.osType = si.osType
+
+        if (si.osType == OsType.LINUX):
+            self.separator = '/'
+        elif (si.osType == OsType.WIN):
+            self.separator = '\\'
+
+        self.updateTempDirZip = self.updateTempDir + self.separator + self.updateTempDirZip
+        self.updateTempDirUnpacked = self.updateTempDir + self.separator + self.updateTempDirUnpacked
 
     def check(self):
         try:
@@ -53,13 +63,10 @@ class Update:
 
     def download(self):
         try:
-            if not os.path.exists(self.updateTempDir + '/' + self.updateTempDirZip):
-                os.makedirs(self.updateTempDir + '/' + self.updateTempDirZip)
+            if not os.path.exists(self.updateTempDirZip):
+                os.makedirs(self.updateTempDirZip)
 
-            if (self.osType == OsType.LINUX):
-                urllib.request.urlretrieve(self.url + self.updateAppName, self.updateTempDir + '/' + self.updateTempDirZip + '/' + self.updateAppName)
-            elif (self.osType == OsType.WIN):
-                urllib.request.urlretrieve(self.url + self.updateAppName, self.updateTempDir + '\\' + self.updateTempDirZip + '\\' + self.updateAppName)
+            urllib.request.urlretrieve(self.url + self.updateAppName, self.updateTempDirZip + self.separator + self.updateAppName)
         except:
             InfoPrinter.out(PrintOutput.WARNING, 'download update failed')
             return False
@@ -70,25 +77,24 @@ class Update:
     def updateApp(self):
         try:
             # unzip
-            zip_ref = zipfile.ZipFile(self.updateTempDir + '/' + self.updateTempDirZip + '/' + self.updateAppName, 'r')
-            zip_ref.extractall(self.updateTempDir + '/' + self.updateTempDirUnpacked)
+            zip_ref = zipfile.ZipFile(self.updateTempDirZip + self.separator + self.updateAppName, 'r')
+            zip_ref.extractall(self.updateTempDirUnpacked)
             zip_ref.close()
 
             InfoPrinter.out(PrintOutput.OK, 'successfully unpacked update')
 
             # copy and overwrite
-            copy_tree(self.updateTempDir + '/' + self.updateTempDirUnpacked + '/', '.')
+            copy_tree(self.updateTempDirUnpacked + self.separator, '.')
 
             InfoPrinter.out(PrintOutput.OK, 'update was successful')
         except:
             InfoPrinter.out(PrintOutput.WARNING, 'update failed')
         finally:
             # clean temp directory
-
             try:
-                shutil.rmtree(self.updateTempDir + '/' + self.updateTempDirZip)
-                shutil.rmtree(self.updateTempDir + '/' + self.updateTempDirUnpacked)
+                shutil.rmtree(self.updateTempDirZip)
+                shutil.rmtree(self.updateTempDirUnpacked)
             except:
-                InfoPrinter.out(PrintOutput.OK, 'temp directory cleaned')
-            else:
                 InfoPrinter.out(PrintOutput.WARNING, 'temp directory can not clean')
+            else:
+                InfoPrinter.out(PrintOutput.OK, 'temp directory cleaned')

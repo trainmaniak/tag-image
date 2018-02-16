@@ -1,4 +1,4 @@
-#!venv-win\Scripts\pythonw.exe
+#!venv-win\Scripts\python.exe
 
 from view import *
 
