@@ -12,7 +12,7 @@ from tools import *
 from update import *
 
 class StatInfo:
-    appVersion = "0.2.0"
+    appVersion = "0.2.1"
     osType = None
     lastAlbums = None
     lastSearchExpression = ""
@@ -122,9 +122,15 @@ def get_content(items):
         else:
             tags = " value=\"" + ", ".join(oneItem.tags) + "\" "
 
+        dirNameLength = None
+        if (len(oneItem.name) > 13):
+            dirNameLength = "class=\"long-name\""
+        else:
+            dirNameLength = "class=\"short-name\""
+
         content += "<div class=\"entry\">" \
                     "<form action=\"http://localhost:5000/\" method=\"post\">" \
-                    "<label for=\"subdirName\">" + oneItem.name + "</label>" \
+                    "<label for=\"subdirName\" " + dirNameLength + ">" + oneItem.name + "</label>" \
                     "<input type=\"hidden\" name=\"subdirName\" value=\"" + oneItem.name + "\">" \
                     "<input class=\"txt_tags\" type=\"text\" name=\"tags\" placeholder=\"Tags\"" + tags + ">" \
                     "<input class=\"txt_date\" type=\"text\" name=\"date\" value=\"" + oneItem.date + "\" placeholder=\"Date\">" \
@@ -211,15 +217,17 @@ def launch():
 
     InfoPrinter.out(PrintOutput.DEBUG, "Operating system: " + platform)
 
-    # update
-    updateDownloader = Update(si)
-    if (updateDownloader.check()):
-        if (updateDownloader.download()):
-            updateDownloader.updateApp()
-
-
     # launch core (db, ...)
     core_launch()
+
+    # update
+    if (db.autoUpdate):
+        updateDownloader = Update(si)
+        if (updateDownloader.check()):
+            if (updateDownloader.download()):
+                updateDownloader.updateApp()
+        else:
+            InfoPrinter.out(PrintOutput.OK, "Lastest version")
 
     # run flask and open tab in browser
     port = 5000

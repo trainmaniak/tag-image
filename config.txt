@@ -1,4 +1,5 @@
 rootDirectory=root
 entriesFileLocation=entries.txt
 exploreOnStartup=false
+autoUpdate=true
 appName=Image

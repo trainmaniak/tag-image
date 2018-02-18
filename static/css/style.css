@@ -72,7 +72,7 @@ h1 {
 }
 
 #prim {
-    border-left: 7px solid rgb(50, 255, 50);
+    border-left: 7px solid rgb(40, 240, 40);
     padding-left: 10px;
 }
 
@@ -84,12 +84,18 @@ h1 {
 #app_version {
     position: fixed;
     right: 30px;
-    bottom: 20px;
+    bottom: 47px;
+}
+
+#credits {
+    position: fixed;
+    right: 30px;
+    bottom: 23px;
 }
 
 .btn_save {
     width: 70px;
-    margin-right: 10px;
+    margin-right: 7px;
 }
 
 .btn_open {
@@ -97,8 +103,19 @@ h1 {
 }
 
 .entry label {
+    width: 163px;
+    height: 37px;
+    padding: 0;
+    text-align: left;
+}
+
+.entry .short-name {
     font-size: 24px;
-    padding: 4px 0;
+}
+
+.entry .long-name {
+    font-size: 16px;
+    overflow: hidden;
 }
 
 .entry form {
@@ -130,11 +147,11 @@ input[type=submit] {
 }
 
 .entry form .txt_tags {
-    width: 510px;
-    margin: 0px 10px;
+    width: 502px;
+    margin: 0px 7px;
 }
 
 .entry form .txt_date {
     width: 95px;
-    margin: 0 10px 0 0;
+    margin: 0 7px 0 0;
 }

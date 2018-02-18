@@ -3,6 +3,7 @@ import zipfile
 import urllib
 import os
 import shutil
+import stat
 
 from distutils.dir_util import copy_tree
 
@@ -20,11 +21,13 @@ class Update:
 
     separator = None
 
+    osType = None
     currentVersion = None
     newVersion = None
 
     def __init__(self, si):
         self.currentVersion = si.appVersion
+        self.osType = si.osType
 
         if (si.osType == OsType.LINUX):
             self.separator = '/'
@@ -85,6 +88,13 @@ class Update:
 
             # copy and overwrite
             copy_tree(self.updateTempDirUnpacked + self.separator, '.')
+
+            # for linux only - make launcher and interpreter executable
+            if (self.osType == OsType.LINUX):
+                st = os.stat('app-linux.py')
+                os.chmod('app-linux.py', st.st_mode | stat.S_IEXEC)
+                st = os.stat('venv-linux/bin/python3')
+                os.chmod('venv-linux/bin/python3', st.st_mode | stat.S_IEXEC)
 
             InfoPrinter.out(PrintOutput.OK, 'update was successful')
         except:
