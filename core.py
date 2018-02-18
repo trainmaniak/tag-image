@@ -17,8 +17,9 @@ class Entry:
 
     def get_matches(self, tags):
         degree = 0
-        
+
         for tag in tags:
+            tag = tag.lower()
             if tag in self.tags:
                 degree += 1
 
@@ -26,12 +27,19 @@ class Entry:
 
 class Database:
     fileConfig = None
-    entriesFileLocation = None
-    exploreOnStartup = False
     fileEntries = None
 
     rootDir = None
+    entriesFileLocation = None
+    exploreOnStartup = False
+    autoUpdate = True
     appName = None
+
+    rootDirBool = False
+    entriesFileLocationBool = False
+    exploreOnStartupBool = False
+    autoUpdateBool = False
+    appNameBool = False
 
     entries = list()
     
@@ -69,13 +77,13 @@ class Database:
                 keys = list()
 
                 for key in buffer[2].replace('\r', '').replace('\n', '').split("/"):
-                    keys.append(key)
+                    keys.append(key.lower())
  
                 self.entries.append(Entry(name, date, keys))
             except:
                 InfoPrinter.out(PrintOutput.WARNING, "bad format of entries file")
             else:
-                InfoPrinter.out(PrintOutput.DEBUG, name + " | " + date + " | " + ", ".join(keys))
+                InfoPrinter.out(PrintOutput.DEBUG, "{} | {} | {}".format(name, date, ", ".join(keys)))
         
         InfoPrinter.out(PrintOutput.OK, "load entries file")
 
@@ -108,7 +116,9 @@ class Database:
         
     def add_entry(self, name, date, tags):
         try:
-            line = name + ";" + date + ";" + ('/'.join(tags))
+            for tag in tags:
+                tag.lower()
+            line = "{};{};{}".format(name, date, '/'.join(tags))
             self.fileEntries.write(line+"\r\n")
         except IOError:
             InfoPrinter.out(PrintOutput.ERROR, "permissions to write file")
@@ -136,7 +146,7 @@ class Database:
 
     def open_config(self, fileName):
         try:
-            self.fileConfig = open(fileName, 'r')
+            self.fileConfig = open(fileName, 'r+')
         except IOError:
             InfoPrinter.out(PrintOutput.ERROR, "open config file")
         else:
@@ -151,21 +161,41 @@ class Database:
 
                 if (key == "rootDirectory"):
                     self.rootDir = value
-                elif (key == "appName"):
-                    self.appName = value
+                    self.rootDirBool = True
                 elif (key == "entriesFileLocation"):
                     self.entriesFileLocation = value
+                    self.entriesFileLocationBool = True
                 elif (key == "exploreOnStartup"):
                     if (value == "true"):
                         self.exploreOnStartup = True
+                    self.exploreOnStartupBool = True
+                elif (key == "autoUpdate"):
+                    if (value == "false"):
+                        self.autoUpdate = False
+                    self.autoUpdateBool = True
+                elif (key == "appName"):
+                    self.appName = value
+                    self.appNameBool = True
                 else:
                     InfoPrinter.out(PrintOutput.WARNING, "bad value in config file")
             except:
                 InfoPrinter.out(PrintOutput.WARNING, "bad format of config file")
             else:
                 InfoPrinter.out(PrintOutput.DEBUG, key + "=" + value)
+                '''
+                self.repair_config_compatibility()
+                '''
         
         InfoPrinter.out(PrintOutput.OK, "load config file")
+
+    def repair_config_compatibility(self):
+        try:
+            if (not self.autoUpdateBool):
+                self.fileConfig.write("autoUpdate=true\r\n")
+        except:
+            InfoPrinter.out(PrintOutput.WARNING, "repair compatibility in config file after update failed")
+        else:
+            InfoPrinter.out(PrintOutput.OK, "successfully repaired config after update")
 
     def close_config(self):
         self.fileConfig.close()
@@ -175,8 +205,6 @@ class Database:
         matches = list()
         
         for entry in self.entries:
-            print(keys)
-            print("///" + str(entry.get_matches(keys)[1]))
             matches.append(entry.get_matches(keys))
 
         primaryMatches = list()
