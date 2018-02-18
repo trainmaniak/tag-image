@@ -2,6 +2,8 @@
 import subprocess
 import webbrowser
 import threading
+import sys
+import os
 
 #from flask_socketio import SocketIO, emit
 from flask import Flask, render_template, request#, sessions
@@ -12,7 +14,7 @@ from tools import *
 from update import *
 
 class StatInfo:
-    appVersion = "0.2.1"
+    appVersion = "0.2.2"
     osType = None
     lastAlbums = None
     lastSearchExpression = ""
@@ -39,7 +41,7 @@ def index():
     # nothing form / home page
     #-------------------------
     if request.method != 'POST':
-        return render_template("index.html", appName = db.appName, lastSearch=si.lastSearchExpression, content ="", version=si.appVersion)
+        return render_web('')
     else:
         # save form (save tags)
         #----------------------
@@ -59,9 +61,9 @@ def index():
                     # TODO font, setting, lib-flask,
 
             if (si.lastAction == LastAction.EXPLORE):
-                return explore()
+                return render_web(explore())
             else:
-                return search()
+                return render_web(search())
 
         # open form (open location in file manager)
         #------------------------------------------
@@ -81,22 +83,40 @@ def index():
                     # TODO open after search ???? > lastNewAlbums
 
             if (si.lastAction == LastAction.EXPLORE):
-                return explore()
+                return render_web(explore())
             else:
-                return search()
+                return render_web(search())
 
         # explore form (search for new albums)
         # -------------------------------------
         elif "explore" in request.form:
             si.lastAction = LastAction.EXPLORE
-            return explore()
+
+            return render_web(explore())
 
         # search form (search for existing albums)
-        #-----------------------------------------
+        # ----------------------------------------
         elif "search" in request.form:
             si.lastAction = LastAction.SEARCH
             si.lastSearchExpression = request.form["searchTags"]
-            return search()
+
+            return render_web(search())
+
+        # open setting form (config)
+        # -----------------
+        elif "setting" in request.form:
+            return render_web(setting())
+
+        # save setting form (save config)
+        elif "settingSave" in request.form:
+            db.save_config(request.form['newSetting'])
+
+            if (si.lastAction == LastAction.EXPLORE):
+                return render_web(explore())
+            elif (si.lastAction == LastAction.SEARCH):
+                return render_web(search())
+            else:
+                return render_web('')
 
         # close form (close app)
         # ----------------------
@@ -120,7 +140,7 @@ def get_content(items):
         if (oneItem.tags == None):
             tags = ""
         else:
-            tags = " value=\"" + ", ".join(oneItem.tags) + "\" "
+            tags = " value=\"{}\" ".format(", ".join(oneItem.tags))
 
         dirNameLength = None
         if (len(oneItem.name) > 13):
@@ -151,7 +171,7 @@ def search():
 
     if (len(primaryMatches) == 0 and len(secondaryMatches) == 0):
         content = "<h2>No items found</h2>"
-        return render_template("index.html", appName=db.appName, lastSearch=si.lastSearchExpression, content=content, version=si.appVersion)
+        return content
 
     si.lastAlbums = list()
     si.lastAlbums.extend(primaryMatches)
@@ -171,7 +191,7 @@ def search():
         content += sec
         content += "</div>"
 
-    return render_template("index.html", appName=db.appName, lastSearch=si.lastSearchExpression, content=content, version=si.appVersion)
+    return content
 
 def explore():
     reload_entry()
@@ -179,13 +199,26 @@ def explore():
     newAlbums = db.explore()
     if (len(newAlbums) == 0):
         content = "<h2>Nothing new</h2>"
-        return render_template("index.html", appName = db.appName, lastSearch=si.lastSearchExpression, content=content, version=si.appVersion)
+        return content
 
     si.lastAlbums = newAlbums
 
     content = "<h2>New albums:</h2>"
     content += get_content(newAlbums)
-    return render_template("index.html", appName = db.appName, lastSearch=si.lastSearchExpression, content=content, version=si.appVersion)
+    return content
+
+def setting():
+    db.close_config()
+    db.open_config("config.txt")
+    content = '<h2>Setting:</h2>' \
+                '<form action="http://localhost:5000/" method="post">' \
+                '<button id="btn_setting-save" type="submit" name="settingSave">Save</button>' \
+                '<textarea id="setting-textarea" name="newSetting">{}</textarea>' \
+                '</form>'.format(db.fileConfig.read())
+    return content
+
+def render_web(content):
+    return render_template("index.html", appName=db.appName, lastSearch=si.lastSearchExpression, content=content, version=si.appVersion)
 
 def reload_entry():
     db.close_entries()
@@ -226,6 +259,17 @@ def launch():
         if (updateDownloader.check()):
             if (updateDownloader.download()):
                 updateDownloader.updateApp()
+
+                # restart app
+                python = sys.executable
+                os.execl(python, python, *sys.argv)
+                '''
+                if (si.osType == OsType.LINUX):
+                    os.system('./app-linux.py')
+                elif (si.osType == OsType.WIN):
+                    os.system('app-win.py')
+                close_app()
+                '''
         else:
             InfoPrinter.out(PrintOutput.OK, "Lastest version")
 

@@ -106,7 +106,7 @@ class Database:
 
             if (add):
                 # get time of current album
-                epochDate = os.path.getctime(self.rootDir + "/" + subDir)
+                epochDate = os.path.getctime('{}/{}'.format(self.rootDir, subDir))
                 date = time.strftime('%Y.%m.%d', time.localtime(epochDate))
 
                 newAlbums.append(Entry(subDir, date, None))
@@ -187,6 +187,19 @@ class Database:
                 '''
         
         InfoPrinter.out(PrintOutput.OK, "load config file")
+
+    def save_config(self, newSetting):
+        try:
+            self.close_config()
+            self.open_config("config.txt")
+            self.fileConfig.truncate()
+
+            self.fileConfig.write(newSetting)
+            self.fileConfig.flush()
+        except:
+            InfoPrinter.out(PrintOutput.WARNING, 'save new configuration failed')
+        else:
+            InfoPrinter.out(PrintOutput.OK, 'successfully saved new configuration')
 
     def repair_config_compatibility(self):
         try:
